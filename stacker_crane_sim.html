@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>堆垛机模拟器</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Share Tech Mono', monospace;
+            color: #0ff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            background: rgba(0, 10, 20, 0.85);
+            border: 1px solid #0ff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            padding: 20px;
+            z-index: 2;
+            backdrop-filter: blur(5px);
+            border-radius: 5px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin: 0 0 15px 0;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 5px #0ff;
+            border-bottom: 1px solid #0ff;
+            padding-bottom: 10px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .status-label {
+            color: #888;
+        }
+
+        .status-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .highlight {
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff;
+        }
+
+        .addr-aisle {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .addr-loc {
+            color: #ffdd00;
+            font-weight: bold;
+        }
+
+        .addr-lvl {
+            color: #ff8800;
+            font-weight: bold;
+        }
+
+        #mini-map {
+            margin-top: 20px;
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-crane {
+            position: absolute;
+            background: #0ff;
+            box-shadow: 0 0 5px #0ff;
+            transition: all 0.1s linear;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 10px;
+            color: #555;
+            text-align: center;
+        }
+
+        .reset-btn {
+            margin-top: 15px;
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 0, 0, 0.3);
+            border: 1px solid #f00;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 0, 0, 0.6);
+            box-shadow: 0 0 10px #f00;
+        }
+
+        .mode-btn {
+            margin-top: 0;
+            padding: 8px 15px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            color: #0ff;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .mode-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+        }
+
+        .mode-btn.fork-active {
+            background: rgba(255, 165, 0, 0.3);
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+
+        .aisle-btn {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #0ff;
+            color: #0ff;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            padding: 2px 5px;
+            margin-right: 5px;
+        }
+
+        .aisle-btn.active {
+            background: rgba(0, 255, 255, 0.3);
+            font-weight: bold;
+            box-shadow: 0 0 5px #0ff;
+        }
+
+        .view-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 200, 100, 0.1);
+            border: 1px solid #0c6;
+            color: #0c6;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .view-btn:hover {
+            background: rgba(0, 200, 100, 0.3);
+        }
+
+        #control-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+            background: rgba(0, 10, 20, 0.9);
+            padding: 15px 30px;
+            border: 1px solid #0ff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+            backdrop-filter: blur(5px);
+        }
+
+        .keys-container {
+            display: flex;
+            gap: 40px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #333;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #555;
+            transition: all 0.1s ease;
+            cursor: pointer;
+        }
+
+        .control-btn.active {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #0ff;
+            color: #0ff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-name {
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .btn-key {
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        #exam-panel {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px;
+            background: rgba(50, 0, 50, 0.8);
+            border: 1px solid #f0f;
+            border-radius: 5px;
+            text-align: center;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
+        }
+
+        #exam-panel.active {
+            display: block;
+        }
+
+        .exam-target {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f0f;
+            margin: 10px 0;
+            text-shadow: 0 0 10px #f0f;
+        }
+
+        #exam-results {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #f0f;
+            padding: 40px;
+            z-index: 100;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        #exam-results h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #f0f;
+            margin-top: 0;
+        }
+
+        .result-list {
+            text-align: left;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .result-item {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #333;
+        }
+
+        .result-item.correct {
+            color: #0f0;
+        }
+
+        .result-item.wrong {
+            color: #f00;
+        }
+
+        .exam-btn {
+            background: rgba(255, 0, 255, 0.2);
+            border: 1px solid #f0f;
+            color: #f0f;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .exam-btn:hover {
+            background: rgba(255, 0, 255, 0.5);
+            box-shadow: 0 0 15px #f0f;
+        }
+
+        #fpv-hud {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        #fpv-hud.active {
+            display: block;
+        }
+
+        .mode-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #555;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 255, 255, 0.1);
+            color: #0ff;
+            border-bottom: 2px solid #0ff;
+        }
+
+        #semiauto-panel {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(0, 10, 20, 0.9);
+            padding: 15px 30px;
+            border: 1px solid #0ff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+            backdrop-filter: blur(5px);
+        }
+
+        #semiauto-panel.active {
+            display: block;
+        }
+
+        .sa-grid {
+            display: grid;
+            grid-template-columns: 80px 40px 60px 60px;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            border: none;
+            margin-bottom: 15px;
+        }
+
+        .sa-cell {
+            background: rgba(0, 255, 255, 0.05);
+            color: #0ff;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            font-family: 'Share Tech Mono', monospace;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .sa-header {
+            background: rgba(0, 255, 255, 0.1);
+            color: #fff;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sa-label-cell {
+            justify-content: flex-start;
+            padding-left: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .sa-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Share Tech Mono', monospace;
+            color: #fff;
+        }
+
+        .sa-input:focus {
+            outline: none;
+            box-shadow: 0 0 5px #0ff;
+        }
+
+        .sa-select {
+            width: 100%;
+            background: #000;
+            border: none;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            padding: 0 5px;
+            /* Add padding */
+            appearance: none;
+            /* Remove default arrow if needed, but usually fine */
+        }
+
+        .sa-btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+
+        .sa-action-btn {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            color: #0ff;
+            flex: 1;
+            padding: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            transition: all 0.2s;
+        }
+
+        .sa-action-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .sa-action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .sa-action-btn.selected {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 15px #0ff;
+        }
+
+        .sa-enter-btn {
+            font-size: 24px;
+        }
+
+        .blink {
+            animation: blinker 0.5s linear infinite;
+        }
+
+        @keyframes blinker {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        #sa-status.error {
+            color: #ff3333 !important;
+            text-shadow: 0 0 5px rgba(255, 51, 51, 0.5);
+        }
+
+        /* Cargo Tooltip */
+        #cargo-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0ff;
+            padding: 8px 12px;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Cargo Control Buttons (Shared across modes) */
+        #cargo-controls {
+            position: absolute;
+            top: 20px;
+            left: 380px;
+            /* 20px + 300px (panel) + 60px spacing */
+            display: flex;
+            gap: 10px;
+            z-index: 15;
+        }
+
+        .cargo-btn {
+            background: rgba(0, 10, 20, 0.9);
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 8px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            border-radius: 5px;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+            min-width: 100px;
+            white-space: nowrap;
+        }
+
+        .cargo-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .cargo-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <!-- Cargo Controls (Shared) -->
+        <div id="cargo-controls">
+            <button id="btn-rand-cargo" class="cargo-btn">随机货物</button>
+            <button id="btn-clear-cargo" class="cargo-btn">清空货物</button>
+        </div>
+
+        <!-- Cargo Tooltip -->
+        <div id="cargo-tooltip"></div>
+
+        <!-- Status Display -->
+        <div class="mode-tabs">
+            <button class="tab-btn active" id="tab-manual">手动模式</button>
+            <button class="tab-btn" id="tab-semiauto">半自动模式</button>
+        </div>
+
+        <h1>系统状态</h1>
+
+        <div id="manual-panel">
+            <div class="status-row">
+                <span class="status-label">位置 X:</span>
+                <span id="val-x" class="status-value">1</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">层级 Y:</span>
+                <span id="val-y" class="status-value">1</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">模式:</span>
+                <span id="val-mode" class="status-value">停止</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">巷道:</span>
+                <div id="aisle-controls">
+                    <button id="btn-aisle-001" class="aisle-btn active">001</button>
+                    <button id="btn-aisle-002" class="aisle-btn">002</button>
+                </div>
+            </div>
+            <div class="status-row">
+                <span class="status-label">货位号地址:</span>
+                <span id="val-system-id" class="status-value"></span>
+            </div>
+
+            <button id="btn-view-toggle" class="view-btn">切换视角</button>
+
+            <div id="mini-map">
+                <div id="map-crane-indicator" class="map-crane"></div>
+            </div>
+
+            <button id="btn-reset" class="reset-btn">重置原点</button>
+
+            <div class="controls-hint">
+                按住 'S' 或 'K' 启动电机<br>
+                同时按住以高速运行
+            </div>
+
+            <button id="btn-exam-mode" class="exam-btn" style="margin-top: 20px; width: 100%;">训练模式</button>
+        </div>
+
+
+    </div>
+
+    <div id="exam-panel">
+        <div style="font-size: 12px; color: #ccc;">题目 <span id="exam-q-num">1</span>/<span id="exam-q-total">5</span>
+        </div>
+        <div class="exam-target" id="exam-target-id">S0010010011</div>
+        <div style="font-size: 10px; color: #888;">移动到目标位置并按回车</div>
+        <button class="exam-btn" id="btn-exam-quit"
+            style="margin-top: 10px; font-size: 10px; padding: 5px;">退出训练</button>
+    </div>
+
+    <div id="fpv-hud">
+        <div>货位: <span id="fpv-loc"></span></div>
+        <div>层数: <span id="fpv-lvl"></span></div>
+    </div>
+
+    <div id="exam-results">
+        <h2>训练完成</h2>
+        <div style="font-size: 40px; margin: 20px 0;" id="exam-final-score">80%</div>
+        <div id="exam-duration"
+            style="font-size: 24px; color: #0ff; margin-bottom: 20px; font-family: 'Orbitron', sans-serif; text-shadow: 0 0 10px #0ff;">
+        </div>
+        <div class="result-list" id="exam-result-list"></div>
+        <button class="exam-btn" id="btn-results-close">关闭</button>
+    </div>
+
+    <div id="control-bar">
+        <button id="btn-mode-toggle" class="mode-btn">操作模式: 行走</button>
+        <div class="keys-container">
+            <div class="control-group">
+                <div id="key-a" class="control-btn">
+                    <div class="btn-name">A1</div>
+                    <div class="btn-key">(A)</div>
+                </div>
+                <div id="key-s" class="control-btn">
+                    <div class="btn-name">C1</div>
+                    <div class="btn-key">(S)</div>
+                </div>
+                <div id="key-d" class="control-btn">
+                    <div class="btn-name">A2</div>
+                    <div class="btn-key">(D)</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div id="key-j" class="control-btn">
+                    <div class="btn-name">B1</div>
+                    <div class="btn-key">(J)</div>
+                </div>
+                <div id="key-k" class="control-btn">
+                    <div class="btn-name">C2</div>
+                    <div class="btn-key">(K)</div>
+                </div>
+                <div id="key-l" class="control-btn">
+                    <div class="btn-name">B2</div>
+                    <div class="btn-key">(L)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="semiauto-panel">
+        <div class="sa-grid">
+            <!-- Headers -->
+            <div class="sa-cell sa-header" style="grid-column: span 1;">动作点</div>
+            <div class="sa-cell sa-header">A</div>
+            <div class="sa-cell sa-header">X</div>
+            <div class="sa-cell sa-header">Y</div>
+
+            <!-- Actual Values -->
+            <div class="sa-cell sa-label-cell">实际值</div>
+            <div class="sa-cell" id="sa-act-aisle">0</div>
+            <div class="sa-cell" id="sa-act-x">0</div>
+            <div class="sa-cell" id="sa-act-y">0</div>
+
+            <!-- Target Values -->
+            <div class="sa-cell sa-label-cell">半自动</div>
+            <div class="sa-cell">
+                <select id="sa-input-aisle" class="sa-select">
+                    <option value="L">L</option>
+                    <option value="R">R</option>
+                </select>
+            </div>
+            <div class="sa-cell">
+                <input type="number" id="sa-input-x" class="sa-input" value="1" min="1" max="52">
+            </div>
+            <div class="sa-cell">
+                <input type="number" id="sa-input-y" class="sa-input" value="1" min="1" max="8">
+            </div>
+        </div>
+
+        <div class="sa-btn-group">
+            <button class="sa-action-btn">取</button>
+            <button class="sa-action-btn">放</button>
+            <button id="sa-btn-pos" class="sa-action-btn">位置</button>
+            <button id="sa-btn-enter" class="sa-action-btn sa-enter-btn">↵</button>
+        </div>
+
+        <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center;">
+            <span id="sa-status">等待功能指令</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://esm.sh/three@0.160.0';
+        import { OrbitControls } from 'https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+        const CONFIG = {
+            aisleLength: 52,
+            aisleHeight: 8,
+            rackDepth: 1,
+            aisleWidth: 2,
+            unitSize: 1,
+            originOffset: 1,
+            speeds: {
+                stop: 0,
+                slow: 0.02,
+                fast: 0.08
+            },
+            colors: {
+                rack: 0x00ffff,
+                craneMast: 0xff0055,
+                cranePlatform: 0xffaa00,
+                grid: 0x222222
+            }
+        };
+
+        const state = {
+            x: CONFIG.aisleLength + CONFIG.originOffset,
+            y: 1,
+            z: 0,
+            keys: { a: false, d: false, j: false, l: false, s: false, k: false },
+            mode: 'STOP',
+            opMode: 'TRAVEL',
+            viewMode: 'GOD',
+            aisle: '001',
+            controlMode: 'MANUAL', // MANUAL, SEMIAUTO
+            semiAuto: {
+                active: false,
+                target: { x: 0, y: 0, aisle: '001', type: 'POS' }, // type: POS, PICK, PLACE
+                running: false,
+                targetSelected: false,
+                stage: 0 // 0:Idle, 1:Travel, 2:Extend, 3:Lift/Lower, 4:Retract
+            },
+            inventory: {}, // key: "aisle-x-y", val: mesh/null
+            craneCargo: null, // mesh if crane has cargo
+            exam: {
+                active: false,
+                questions: [],
+                currentQuestionIndex: 0,
+                results: [],
+                markers: [],
+                startTime: 0
+            }
+        };
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(CONFIG.aisleLength + 5, CONFIG.aisleHeight * 1.5, 20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(CONFIG.aisleLength / 2, CONFIG.aisleHeight / 2, 0);
+        controls.update();
+
+        scene.add(new THREE.AmbientLight(0x404040));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        scene.add(new THREE.GridHelper(100, 100, CONFIG.colors.rack, CONFIG.colors.grid));
+
+        function createTextSprite(message, scale = 1, color = 'white', width = 128) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = 128;
+            ctx.fillStyle = color;
+            ctx.font = "Bold 60px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(message, width / 2, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture }));
+            sprite.scale.set((width / 128) * scale, 1 * scale, 1);
+            return sprite;
+        }
+
+        function createRack(zPosition) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+
+            for (let x = 0; x <= CONFIG.aisleLength; x++) {
+                vertices.push(x, 0, 0, x, CONFIG.aisleHeight, 0);
+                vertices.push(x, 0, -CONFIG.rackDepth, x, CONFIG.aisleHeight, -CONFIG.rackDepth);
+            }
+            for (let y = 0; y <= CONFIG.aisleHeight; y++) {
+                vertices.push(0, y, 0, CONFIG.aisleLength, y, 0);
+                vertices.push(0, y, -CONFIG.rackDepth, CONFIG.aisleLength, y, -CONFIG.rackDepth);
+            }
+            for (let x = 0; x <= CONFIG.aisleLength; x++) {
+                for (let y = 0; y <= CONFIG.aisleHeight; y++) {
+                    vertices.push(x, y, 0, x, y, -CONFIG.rackDepth);
+                }
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const rack = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: CONFIG.colors.rack, transparent: true, opacity: 0.3 }));
+            rack.position.z = zPosition;
+
+            const labelLocs = [1, 52];
+            for (let i = 5; i <= 50; i += 5) labelLocs.push(i);
+            labelLocs.forEach(loc => {
+                const label = createTextSprite(loc.toString().padStart(2, '0'));
+                label.position.set(CONFIG.aisleLength + 1 - loc - 0.5, CONFIG.aisleHeight + 0.5, 0);
+                rack.add(label);
+            });
+
+            return rack;
+        }
+
+        scene.add(createRack(-CONFIG.aisleWidth / 2));
+        scene.add(createRack(CONFIG.aisleWidth / 2 + CONFIG.rackDepth));
+
+        const originMarker = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.5, 0),
+            new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.5, wireframe: true })
+        );
+        originMarker.position.set(CONFIG.aisleLength + CONFIG.originOffset, 1, 0);
+        scene.add(originMarker);
+
+        const craneGroup = new THREE.Group();
+        scene.add(craneGroup);
+
+        const mast = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, CONFIG.aisleHeight + 0.5, 1.5),
+            new THREE.MeshStandardMaterial({ color: CONFIG.colors.craneMast, emissive: 0x440022, roughness: 0.2, metalness: 0.8 })
+        );
+        mast.position.y = (CONFIG.aisleHeight + 0.5) / 2;
+        craneGroup.add(mast);
+
+        const platform = new THREE.Mesh(
+            new THREE.BoxGeometry(1.2, 0.2, 1.2),
+            new THREE.MeshStandardMaterial({ color: CONFIG.colors.cranePlatform, emissive: 0x442200 })
+        );
+        craneGroup.add(platform);
+
+        const fork = new THREE.Mesh(
+            new THREE.BoxGeometry(1.0, 0.1, 1.0),
+            new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
+        );
+        fork.position.y = 0.15;
+        platform.add(fork);
+
+        const craneLabel = createTextSprite("货位号：001 层数：1", 2.0, "#00ffff", 900);
+        craneLabel.position.y = CONFIG.aisleHeight + 2.0;
+        craneGroup.add(craneLabel);
+
+        // Crane Cargo Mesh (Hidden by default)
+        const craneCargoGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const craneCargoMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.5 });
+        const craneCargoMesh = new THREE.Mesh(craneCargoGeometry, craneCargoMaterial);
+        craneCargoMesh.position.y = 0.6; // On top of fork
+        craneCargoMesh.visible = false;
+        fork.add(craneCargoMesh);
+
+        // Inventory Group
+        const inventoryGroup = new THREE.Group();
+        scene.add(inventoryGroup);
+
+        function createCargo(aisle, x, y) {
+            const mesh = new THREE.Mesh(craneCargoGeometry, craneCargoMaterial);
+            const physX = CONFIG.aisleLength + 1 - x;
+            const physZ = aisle === '001' ? 1.5 : -1.5; // Depth
+            mesh.position.set(physX - 0.5, y + 0.5, physZ);
+            mesh.userData = { aisle, x, y }; // Store coordinates for tooltip
+            inventoryGroup.add(mesh);
+            return mesh;
+        }
+
+        function generateRandomInventory() {
+            clearInventory();
+            for (let x = 1; x <= CONFIG.aisleLength; x++) {
+                for (let y = 1; y <= CONFIG.aisleHeight; y++) {
+                    if (Math.random() < 0.2) { // 20% chance
+                        const aisle = Math.random() > 0.5 ? '001' : '002';
+                        const key = `${aisle}-${x}-${y}`;
+                        state.inventory[key] = createCargo(aisle, x, y);
+                    }
+                }
+            }
+        }
+
+        function clearInventory() {
+            inventoryGroup.clear();
+            state.inventory = {};
+            craneCargoMesh.visible = false;
+            state.craneCargo = null;
+        }
+
+        function updateCraneLabel(loc, lvl) {
+            const locStr = loc === "原" ? "原点" : loc.toString().padStart(3, '0');
+            const msg = `货位号：${locStr} 层数：${lvl}`;
+            const canvas = craneLabel.material.map.image;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#00ffff";
+            ctx.font = "Bold 65px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
+
+            ctx.strokeStyle = "rgba(0, 255, 255, 0.5)";
+            ctx.lineWidth = 2;
+            ctx.strokeText(msg, canvas.width / 2, canvas.height / 2);
+
+            craneLabel.material.map.needsUpdate = true;
+        }
+
+        craneGroup.position.x = state.x;
+        platform.position.y = state.y;
+
+        window.addEventListener('keydown', (e) => {
+            if (state.exam.active && e.code === 'Enter') checkAnswer();
+            else updateKey(e.code, true);
+        });
+        window.addEventListener('keyup', (e) => updateKey(e.code, false));
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            state.x = CONFIG.aisleLength + CONFIG.originOffset;
+            state.y = 1;
+            state.z = 0;
+            craneGroup.position.x = state.x;
+            platform.position.y = state.y;
+            fork.position.z = 0;
+        });
+
+        const btnAisle001 = document.getElementById('btn-aisle-001');
+        const btnAisle002 = document.getElementById('btn-aisle-002');
+
+        function setAisle(val) {
+            state.aisle = val;
+            btnAisle001.classList.toggle('active', val === '001');
+            btnAisle002.classList.toggle('active', val === '002');
+            updateHUD(state.x, state.y, state.mode);
+        }
+
+        btnAisle001.addEventListener('click', () => setAisle('001'));
+        btnAisle002.addEventListener('click', () => setAisle('002'));
+
+        const modeBtn = document.getElementById('btn-mode-toggle');
+        modeBtn.addEventListener('click', () => {
+            state.opMode = state.opMode === 'TRAVEL' ? 'FORK' : 'TRAVEL';
+            modeBtn.textContent = `操作模式: ${state.opMode === 'TRAVEL' ? '行走' : '货叉'}`;
+            modeBtn.classList.toggle('fork-active', state.opMode === 'FORK');
+        });
+
+        const viewBtn = document.getElementById('btn-view-toggle');
+        viewBtn.addEventListener('click', () => {
+            state.viewMode = state.viewMode === 'GOD' ? 'FPV' : 'GOD';
+            if (state.viewMode === 'FPV') {
+                controls.enabled = false;
+                viewBtn.textContent = '切换视角 (第一人称)';
+                viewBtn.style.borderColor = '#f80';
+                viewBtn.style.color = '#f80';
+                document.getElementById('fpv-hud').classList.add('active');
+            } else {
+                controls.enabled = true;
+                viewBtn.textContent = '切换视角 (上帝视角)';
+                viewBtn.style.borderColor = '#0c6';
+                viewBtn.style.color = '#0c6';
+                document.getElementById('fpv-hud').classList.remove('active');
+                camera.position.set(CONFIG.aisleLength + 5, CONFIG.aisleHeight * 1.5, 20);
+                controls.target.set(CONFIG.aisleLength / 2, CONFIG.aisleHeight / 2, 0);
+                controls.update();
+            }
+        });
+
+        const examPanel = document.getElementById('exam-panel');
+        const examResults = document.getElementById('exam-results');
+        const examBtn = document.getElementById('btn-exam-mode');
+
+        examBtn.addEventListener('click', () => {
+            if (!state.exam.active) startExam();
+        });
+
+        document.getElementById('btn-exam-quit').addEventListener('click', quitExam);
+        document.getElementById('btn-results-close').addEventListener('click', closeResults);
+
+        function quitExam() {
+            state.exam.active = false;
+            examPanel.classList.remove('active');
+            examBtn.style.display = 'block';
+            state.exam.markers.forEach(m => scene.remove(m));
+            state.exam.markers = [];
+        }
+
+        function closeResults() {
+            examResults.style.display = 'none';
+            state.exam.markers.forEach(m => scene.remove(m));
+            state.exam.markers = [];
+        }
+
+        function startExam() {
+            const count = parseInt(prompt("题目数量？", "5")) || 5;
+            state.exam.active = true;
+            state.exam.questions = generateQuestions(count);
+            state.exam.currentQuestionIndex = 0;
+            state.exam.results = [];
+            state.exam.startTime = Date.now();
+            state.exam.markers.forEach(m => scene.remove(m));
+            state.exam.markers = [];
+            examPanel.classList.add('active');
+            examBtn.style.display = 'none';
+            updateExamUI();
+        }
+
+        function generateQuestions(count) {
+            const questions = [];
+            for (let i = 0; i < count; i++) {
+                const aisle = Math.random() > 0.5 ? '002' : '001';
+                const loc = Math.floor(Math.random() * CONFIG.aisleLength) + 1;
+                const lvl = Math.floor(Math.random() * CONFIG.aisleHeight) + 1;
+                const id = `S${aisle}${loc.toString().padStart(3, '0')}${lvl.toString().padStart(3, '0')}1`;
+                questions.push({ aisle, loc, lvl, id });
+            }
+            return questions;
+        }
+
+        function checkAnswer() {
+            if (!state.exam.active) return;
+
+            const target = state.exam.questions[state.exam.currentQuestionIndex];
+            const roundedX = Math.round(state.x);
+            let currentLoc = roundedX <= CONFIG.aisleLength ? CONFIG.aisleLength + 1 - roundedX : 1;
+            const currentLvl = Math.round(state.y);
+            const isCorrect = state.aisle === target.aisle && currentLoc === target.loc && currentLvl === target.lvl;
+
+            state.exam.results.push({
+                target: target,
+                submitted: { aisle: state.aisle, loc: currentLoc, lvl: currentLvl },
+                correct: isCorrect
+            });
+
+            createExamMarker(state.aisle, currentLoc, currentLvl, isCorrect);
+
+            state.exam.currentQuestionIndex++;
+            if (state.exam.currentQuestionIndex >= state.exam.questions.length) {
+                finishExam();
+            } else {
+                updateExamUI();
+            }
+        }
+
+        function createExamMarker(aisle, loc, lvl, isCorrect) {
+            const physX = CONFIG.aisleLength + 1 - loc;
+            const physZ = aisle === '001' ? 1.5 : -1.5;
+            const marker = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 0.8, 0.8),
+                new THREE.MeshBasicMaterial({ color: isCorrect ? 0x00ff00 : 0xff0000, transparent: true, opacity: 0.6 })
+            );
+            marker.position.set(physX - 0.5, lvl + 0.5, physZ);
+            scene.add(marker);
+            state.exam.markers.push(marker);
+        }
+
+        function finishExam() {
+            state.exam.active = false;
+            examPanel.classList.remove('active');
+            examBtn.style.display = 'block';
+            examResults.style.display = 'block';
+
+            const correctCount = state.exam.results.filter(r => r.correct).length;
+            const percentage = Math.round((correctCount / state.exam.results.length) * 100);
+            document.getElementById('exam-final-score').textContent = `${percentage}%`;
+
+            const duration = Date.now() - state.exam.startTime;
+            const seconds = Math.floor((duration / 1000) % 60);
+            const minutes = Math.floor((duration / (1000 * 60)) % 60);
+            document.getElementById('exam-duration').textContent = `用时: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            const list = document.getElementById('exam-result-list');
+            list.innerHTML = '';
+            state.exam.results.forEach((r, i) => {
+                const div = document.createElement('div');
+                div.className = `result-item ${r.correct ? 'correct' : 'wrong'}`;
+                div.innerHTML = `题${i + 1}: 目标 ${r.target.id} <br> 提交: S${r.submitted.aisle}${r.submitted.loc.toString().padStart(3, '0')}${r.submitted.lvl.toString().padStart(3, '0')}1`;
+                list.appendChild(div);
+            });
+        }
+
+        function updateExamUI() {
+            const q = state.exam.questions[state.exam.currentQuestionIndex];
+            document.getElementById('exam-q-num').textContent = state.exam.currentQuestionIndex + 1;
+            document.getElementById('exam-q-total').textContent = state.exam.questions.length;
+            document.getElementById('exam-target-id').textContent = q.id;
+        }
+
+        const keyMap = { 'KeyA': 'a', 'KeyD': 'd', 'KeyJ': 'j', 'KeyL': 'l', 'KeyS': 's', 'KeyK': 'k' };
+
+        function updateKey(code, isPressed) {
+            if (keyMap[code]) {
+                state.keys[keyMap[code]] = isPressed;
+                updateUIKeys();
+            }
+        }
+
+        function getSpeed() {
+            const s = state.keys.s, k = state.keys.k;
+            if (!s && !k) return { val: CONFIG.speeds.stop, mode: '停止' };
+            if (s && k) return { val: CONFIG.speeds.fast, mode: '快速' };
+            return { val: CONFIG.speeds.slow, mode: '慢速' };
+        }
+
+        const uiEls = {
+            x: document.getElementById('val-x'),
+            y: document.getElementById('val-y'),
+            mode: document.getElementById('val-mode'),
+            keys: {
+                a: document.getElementById('key-a'),
+                d: document.getElementById('key-d'),
+                j: document.getElementById('key-j'),
+                l: document.getElementById('key-l'),
+                s: document.getElementById('key-s'),
+                k: document.getElementById('key-k')
+            },
+            mapIndicator: document.getElementById('map-crane-indicator'),
+            systemId: document.getElementById('val-system-id')
+        };
+
+        function updateUIKeys() {
+            for (const [key, pressed] of Object.entries(state.keys)) {
+                uiEls.keys[key].classList.toggle('active', pressed);
+            }
+        }
+
+        function updateHUD(x, y, mode) {
+            const roundedX = Math.round(x);
+            let displayX, locNum = 1;
+
+            if (roundedX > CONFIG.aisleLength) {
+                displayX = "原点";
+            } else {
+                locNum = CONFIG.aisleLength + 1 - roundedX;
+                displayX = locNum;
+            }
+
+            const roundedY = Math.round(y);
+            const strLoc = locNum.toString().padStart(3, '0');
+            const strLvl = roundedY.toString().padStart(3, '0');
+
+            uiEls.x.textContent = displayX;
+            uiEls.y.textContent = roundedY;
+            uiEls.mode.textContent = mode;
+            uiEls.systemId.innerHTML = `S<span class="addr-aisle">${state.aisle}</span><span class="addr-loc">${strLoc}</span><span class="addr-lvl">${strLvl}</span>1`;
+
+            document.getElementById('fpv-loc').innerHTML = `<span class="addr-loc">${strLoc}</span>`;
+            document.getElementById('fpv-lvl').innerHTML = `<span class="addr-lvl">${strLvl}</span>`;
+
+            updateCraneLabel(displayX === "原点" ? "原" : locNum, roundedY);
+
+            uiEls.mode.className = mode === '快速' ? 'status-value highlight' : 'status-value';
+
+            const pctX = ((x - 0.5) / (CONFIG.aisleLength + CONFIG.originOffset)) * 100;
+            const pctY = ((y - 0.5) / CONFIG.aisleHeight) * 100;
+            uiEls.mapIndicator.style.left = `${pctX}%`;
+            uiEls.mapIndicator.style.bottom = `${pctY}%`;
+            uiEls.mapIndicator.style.width = `${100 / (CONFIG.aisleLength + CONFIG.originOffset)}%`;
+            uiEls.mapIndicator.style.height = `${100 / CONFIG.aisleHeight}%`;
+        }
+
+        // Raycaster for Tooltip
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const tooltip = document.getElementById('cargo-tooltip');
+
+        window.addEventListener('mousemove', (event) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // Move tooltip with mouse
+            tooltip.style.left = event.clientX + 15 + 'px';
+            tooltip.style.top = event.clientY + 15 + 'px';
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const { val: speed, mode } = getSpeed();
+            state.mode = mode;
+
+            if (originMarker) {
+                originMarker.rotation.y += 0.02;
+                originMarker.rotation.x += 0.01;
+            }
+
+            if (state.controlMode === 'SEMIAUTO' && state.semiAuto.running) {
+                const targetX = CONFIG.aisleLength + 1 - state.semiAuto.target.x;
+                const targetY = state.semiAuto.target.y;
+                const targetAisle = state.semiAuto.target.aisle;
+                const type = state.semiAuto.target.type;
+
+                // Adjustment for PLACE operation: Travel to Y + 0.2 (High)
+                let actualTargetY = state.semiAuto.target.y;
+                if (type === 'PLACE') {
+                    actualTargetY += 0.2; // Arrive High for Place
+                }
+
+                // Stage 1: Travel to X/Y
+                if (state.semiAuto.stage === 1) {
+                    if (state.aisle !== targetAisle) setAisle(targetAisle); // Auto Switch
+
+                    const dx = targetX - craneGroup.position.x;
+                    const dy = actualTargetY - platform.position.y;
+                    const arrived = Math.abs(dx) <= 0.05 && Math.abs(dy) <= 0.05;
+
+                    if (!arrived) {
+                        if (Math.abs(dx) > 0.05) craneGroup.position.x += Math.sign(dx) * 0.1;
+                        // For auto-travel we use slightly slower Y speed? Reverting to 0.04 as requested
+                        if (Math.abs(dy) > 0.05) platform.position.y += Math.sign(dy) * 0.04;
+
+                        // Snap to target if close
+                        if (Math.abs(dx) <= 0.05) craneGroup.position.x = targetX;
+                        if (Math.abs(dy) <= 0.05) platform.position.y = actualTargetY;
+
+                        document.getElementById('sa-status').textContent = "正在定位...";
+                    } else {
+                        // Arrived
+                        if (type === 'POS') {
+                            finishSemiAuto("定位完成");
+                        } else {
+                            state.semiAuto.stage = 2; // Next: Extend
+                        }
+                    }
+                }
+                // Stage 2: Extend Fork
+                else if (state.semiAuto.stage === 2) {
+                    const limit = 1.5;
+                    // Fork direction must match cargo Z position:
+                    // Aisle '001' → cargo at z=1.5, fork extends to +1.5
+                    // Aisle '002' → cargo at z=-1.5, fork extends to -1.5
+                    const dir = targetAisle === '001' ? 1 : -1;
+                    const targetZ = dir * limit;
+
+                    const dz = targetZ - state.z;
+                    if (Math.abs(dz) > 0.05) {
+                        state.z += Math.sign(dz) * 0.05;
+                        fork.position.z = state.z;
+                        saStatus.textContent = "货叉伸出...";
+                    } else {
+                        state.z = targetZ; // Snap to limit
+                        fork.position.z = state.z;
+                        state.semiAuto.stage = 3; // Lift/Lower
+                    }
+                }
+                // Stage 3: ACTION (Lift/Lower)
+                else if (state.semiAuto.stage === 3) {
+                    const liftAmount = 0.2;
+                    const baseY = targetY; // Low Position (Rack Level)
+                    const liftY = targetY + liftAmount; // High Position (Lifted)
+
+                    // PICK: Arrived Low (Y) -> Lift to High (Y+0.2)
+                    // PLACE: Arrived High (Y+0.2) -> Lower to Low (Y)
+
+                    // Target Height for this operation
+                    // If PICK, we want to reach LiftY.
+                    // If PLACE, we want to reach BaseY.
+                    const targetH = type === 'PICK' ? liftY : baseY;
+
+                    const dy = targetH - platform.position.y;
+
+                    if (Math.abs(dy) > 0.01) {
+                        // Animate Y
+                        platform.position.y += Math.sign(dy) * 0.02;
+                        saStatus.textContent = type === 'PICK' ? "取货抬升..." : "放货下降...";
+                    } else {
+                        // Snap to target height
+                        platform.position.y = targetH;
+                        // Action Complete
+                        const key = `${targetAisle}-${state.semiAuto.target.x}-${state.semiAuto.target.y}`;
+
+                        if (type === 'PICK') {
+                            // Cargo moves from Rack to Crane
+                            const cargo = state.inventory[key];
+                            if (cargo) {
+                                inventoryGroup.remove(cargo);
+                                delete state.inventory[key];
+                                craneCargoMesh.visible = true;
+                                state.craneCargo = true;
+                            }
+                        } else { // PLACE
+                            // Cargo moves from Crane to Rack
+                            if (!state.inventory[key]) {
+                                state.inventory[key] = createCargo(targetAisle, state.semiAuto.target.x, state.semiAuto.target.y);
+                                craneCargoMesh.visible = false;
+                                state.craneCargo = false;
+                            }
+                        }
+                        state.semiAuto.stage = 4;
+                    }
+                }
+                // Stage 4: Retract
+                else if (state.semiAuto.stage === 4) {
+                    if (Math.abs(state.z) > 0.05) {
+                        state.z += (0 - state.z) * 0.1;
+                        fork.position.z = state.z;
+                        saStatus.textContent = "货叉收回...";
+                    } else {
+                        state.z = 0;
+                        fork.position.z = 0;
+                        finishSemiAuto("任务完成");
+                    }
+                }
+
+            } else if (state.controlMode === 'MANUAL') {
+                // Manual Control Logic...
+                if (state.opMode === 'TRAVEL') {
+                    if (state.keys.a) craneGroup.position.x -= speed;
+                    if (state.keys.d) craneGroup.position.x += speed;
+                    if (state.keys.l) platform.position.y -= speed;
+                    if (state.keys.j) platform.position.y += speed;
+                    if (Math.abs(state.z) > 0.01) {
+                        state.z += (0 - state.z) * 0.1;
+                        fork.position.z = state.z;
+                    }
+                } else {
+                    if (speed > 0) {
+                        if (state.keys.a) state.z += speed;
+                        if (state.keys.d) state.z -= speed;
+                    }
+                    state.z = Math.max(-1.5, Math.min(1.5, state.z));
+                    fork.position.z = state.z;
+                }
+            }
+
+            craneGroup.position.x = Math.max(1, Math.min(CONFIG.aisleLength + CONFIG.originOffset, craneGroup.position.x));
+            platform.position.y = Math.max(1, Math.min(CONFIG.aisleHeight, platform.position.y));
+
+            state.x = craneGroup.position.x;
+            state.y = platform.position.y;
+
+            if (state.viewMode === 'FPV') {
+                const craneWorldPos = new THREE.Vector3();
+                platform.getWorldPosition(craneWorldPos);
+                camera.position.set(craneWorldPos.x, craneWorldPos.y + 0.5, craneWorldPos.z + 2);
+                camera.lookAt(craneWorldPos.x - 5, craneWorldPos.y, craneWorldPos.z);
+            }
+
+            updateHUD(state.x, state.y, state.mode);
+            updateSemiAutoUI(state.x, state.y);
+
+            // Raycasting for Tooltip
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(inventoryGroup.children);
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                const { aisle, x, y } = object.userData;
+                const aisleStr = aisle === '001' ? '1' : '2'; // User asked for (1, 52, 3) format, assuming Aisle 1/2? 
+                // Wait, user example: (1, 52, 3). Is 1 the Aisle? Or is it (X, Y, Z)?
+                // "例如（1，52，3）"
+                // Context: Stacker layout. Usually (Aisle, X, Y).
+                // Let's assume (Aisle, Column, Level).
+                // My aisle is '001' or '002'. Map to 1 and 2.
+                tooltip.style.display = 'block';
+                tooltip.textContent = `(${aisleStr}, ${x}, ${y})`;
+
+                // Highlight effect?
+                if (state.hoveredCargo && state.hoveredCargo !== object) {
+                    state.hoveredCargo.material.emissive.setHex(0x000000);
+                }
+                object.material.emissive.setHex(0x444444);
+                state.hoveredCargo = object;
+            } else {
+                tooltip.style.display = 'none';
+                if (state.hoveredCargo) {
+                    state.hoveredCargo.material.emissive.setHex(0x000000);
+                    state.hoveredCargo = null;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateSemiAutoUI(x, y) {
+            if (state.controlMode !== 'SEMIAUTO') return;
+
+            const roundedX = Math.round(x);
+            let locNum = 1;
+            if (roundedX <= CONFIG.aisleLength) {
+                locNum = CONFIG.aisleLength + 1 - roundedX;
+            }
+            const roundedY = Math.round(y);
+
+            document.getElementById('sa-act-aisle').textContent = state.aisle === '001' ? 'L' : 'R';
+            document.getElementById('sa-act-x').textContent = locNum;
+            document.getElementById('sa-act-y').textContent = roundedY;
+        }
+
+        // Mode Switching
+        const tabManual = document.getElementById('tab-manual');
+        const tabSemiAuto = document.getElementById('tab-semiauto');
+        const controlBar = document.getElementById('control-bar'); // Toggle control-bar
+        const semiAutoPanel = document.getElementById('semiauto-panel');
+
+        // Initial State
+        controlBar.style.display = 'flex'; // Ensure control bar is visible
+
+        tabManual.addEventListener('click', () => {
+            state.controlMode = 'MANUAL';
+            tabManual.classList.add('active');
+            tabSemiAuto.classList.remove('active');
+            controlBar.style.display = 'flex'; // Show Manual Controls
+            semiAutoPanel.classList.remove('active');
+        });
+
+        tabSemiAuto.addEventListener('click', () => {
+            state.controlMode = 'SEMIAUTO';
+            tabSemiAuto.classList.add('active');
+            tabManual.classList.remove('active');
+            controlBar.style.display = 'none'; // Hide Manual Controls
+            semiAutoPanel.classList.add('active');
+        });
+
+        // Inventory Controls
+        document.getElementById('btn-rand-cargo').addEventListener('click', generateRandomInventory);
+        document.getElementById('btn-clear-cargo').addEventListener('click', clearInventory);
+
+        // Semi-Auto Controls
+        const btnPos = document.getElementById('sa-btn-pos');
+        const btnPick = document.querySelector('.sa-action-btn:nth-child(1)'); // 取
+        const btnPlace = document.querySelector('.sa-action-btn:nth-child(2)'); // 放
+        const btnEnter = document.getElementById('sa-btn-enter');
+        const inputAisle = document.getElementById('sa-input-aisle');
+        const inputX = document.getElementById('sa-input-x');
+        const inputY = document.getElementById('sa-input-y');
+
+        const saStatus = document.getElementById('sa-status');
+
+
+
+        function setSemiAutoTarget(type, btn) {
+            // UI Reset
+            [btnPos, btnPick, btnPlace].forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            // Parse Input
+            const aisleCode = inputAisle.value.toUpperCase();
+            const targetAisle = aisleCode === 'R' ? '002' : '001';
+            const targetX = parseInt(inputX.value) || 1;
+            const targetY = parseInt(inputY.value) || 1;
+
+            // Set State
+            state.semiAuto.target = { x: targetX, y: targetY, aisle: targetAisle, type: type };
+            state.semiAuto.targetSelected = true;
+            state.semiAuto.stage = 0; // Reset stage
+
+            // Status Update
+            let taskName = "定位";
+            if (type === 'PICK') taskName = "取货";
+            if (type === 'PLACE') taskName = "放货";
+            saStatus.textContent = `${taskName}指令: 巷道${aisleCode} 排${targetX} 层${targetY}, 请按↵执行`;
+        }
+
+        btnPos.addEventListener('click', () => setSemiAutoTarget('POS', btnPos));
+        btnPick.addEventListener('click', () => setSemiAutoTarget('PICK', btnPick));
+        btnPlace.addEventListener('click', () => setSemiAutoTarget('PLACE', btnPlace));
+
+        btnEnter.addEventListener('click', () => {
+            if (!state.semiAuto.targetSelected) return;
+
+            const { x, y, aisle, type } = state.semiAuto.target;
+            const targetKey = `${aisle}-${x}-${y}`;
+            const cellHasCargo = !!state.inventory[targetKey];
+            const craneHasCargo = !!state.craneCargo;
+
+            // Range Validation
+            if (x < 1 || x > 52) {
+                saStatus.textContent = "故障: X坐标超出范围 (1-52)";
+                saStatus.classList.add('error');
+                state.semiAuto.targetSelected = false;
+                return;
+            }
+            if (y < 1 || y > 8) {
+                saStatus.textContent = "故障: Y坐标超出范围 (1-8)";
+                saStatus.classList.add('error');
+                state.semiAuto.targetSelected = false;
+                return;
+            }
+
+            // Validation
+            if (type === 'PICK') {
+                if (!cellHasCargo) {
+                    saStatus.textContent = "故障: 空取 (货位无货)";
+                    saStatus.classList.add('error');
+                    state.semiAuto.targetSelected = false;
+                    return;
+                }
+                if (craneHasCargo) {
+                    saStatus.textContent = "故障: 货叉已有货";
+                    saStatus.classList.add('error');
+                    state.semiAuto.targetSelected = false;
+                    return;
+                }
+            } else if (type === 'PLACE') {
+                if (cellHasCargo) {
+                    saStatus.textContent = "故障: 重入 (货位有货)";
+                    saStatus.classList.add('error');
+                    state.semiAuto.targetSelected = false;
+                    return;
+                }
+                if (!craneHasCargo) {
+                    saStatus.textContent = "故障: 空放 (货叉无货)";
+                    saStatus.classList.add('error');
+                    state.semiAuto.targetSelected = false;
+                    return;
+                }
+            }
+
+            // Clear error style if validation passes
+            saStatus.classList.remove('error');
+
+            // Start Execution
+            state.semiAuto.running = true;
+            state.semiAuto.stage = 1; // Start Travel
+            btnEnter.classList.add('blink');
+            saStatus.textContent = "系统运行中...";
+        });
+
+        function finishSemiAuto(msg) {
+            state.semiAuto.running = false;
+            state.semiAuto.stage = 0;
+            document.getElementById('sa-btn-enter').classList.remove('blink');
+            [btnPos, btnPick, btnPlace].forEach(b => b.classList.remove('selected'));
+            document.getElementById('sa-status').textContent = msg;
+            state.semiAuto.targetSelected = false;
+        }
+
+
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>
